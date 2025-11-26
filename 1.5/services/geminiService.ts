@@ -5,10 +5,12 @@ import { Problem, JudgeResult } from '../types';
 const API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
 
 function buildPrompt(problem: Problem, userCode: string): string {
-  const testCasesString = problem.testCases.map((tc, index) => 
+  // 构建测试用例字符串
+  const testCasesString = problem.testCases.map((tc, index) =>
     `测试用例 ${index + 1}:\n输入:\n${tc.input}\n预期输出:\n${tc.expectedOutput}`
   ).join('\n---\n');
 
+  // 构建完整的 Prompt，包含问题描述、测试用例和用户代码
   return `
     你是一个专业的Python在线评测系统（Online Judge）。
     你的任务是根据给定的问题描述和一系列内部测试用例，来评测用户提交的Python代码。
@@ -46,6 +48,7 @@ function buildPrompt(problem: Problem, userCode: string): string {
   `;
 }
 
+// 调用 AI 服务评测代码
 export const judgeCode = async (problem: Problem, userCode: string): Promise<JudgeResult> => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
@@ -53,7 +56,7 @@ export const judgeCode = async (problem: Problem, userCode: string): Promise<Jud
   }
 
   const prompt = buildPrompt(problem, userCode);
-  
+
   try {
     const response = await fetch(API_URL, {
       method: 'POST',
@@ -92,7 +95,7 @@ export const judgeCode = async (problem: Problem, userCode: string): Promise<Jud
 
     // 清理可能存在的 Markdown 代码块标记（以防模型偶尔不遵守指令）
     const cleanJson = content.replace(/```json\n?|```/g, '').trim();
-    
+
     const result = JSON.parse(cleanJson) as JudgeResult;
     return result;
 
@@ -100,7 +103,7 @@ export const judgeCode = async (problem: Problem, userCode: string): Promise<Jud
     console.error("Qwen API call failed:", error);
     // 能够更优雅地处理错误，返回给前端展示
     if (error instanceof Error) {
-        throw new Error(`AI 评测服务调用失败: ${error.message}`);
+      throw new Error(`AI 评测服务调用失败: ${error.message}`);
     }
     throw new Error("调用AI评测服务失败。请检查网络或 API Key 设置。");
   }

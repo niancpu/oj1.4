@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", // 编译目标为 ES2022，支持较新的 JS 特性
+    "experimentalDecorators": true, // 启用实验性装饰器支持
+    "useDefineForClassFields": false, // 使用旧式的类字段定义方式
+    "module": "ESNext", // 使用最新的 ES 模块标准
+    "lib": [
+      "ES2022", // 包含 ES2022 的类型定义
+      "DOM", // 包含 DOM API 的类型定义
+      "DOM.Iterable" // 包含 DOM 迭代器的类型定义
+    ],
+    "skipLibCheck": true, // 跳过库文件的类型检查，加快编译速度
+    "types": [
+      "node" // 包含 Node.js 的类型定义
+    ],
+    "moduleResolution": "bundler", // 模块解析策略，适用于 Vite/Webpack 等打包工具
+    "isolatedModules": true, // 确保每个文件都可以作为独立的模块编译
+    "moduleDetection": "force", // 强制将所有文件视为模块
+    "allowJs": true, // 允许在项目中导入 JS 文件
+    "jsx": "react-jsx", // 使用 React 17+ 的 JSX 转换
+    "paths": {
+      "@/*": [
+        "./*" // 配置路径别名，@ 代表项目根目录
+      ]
+    },
+    "allowImportingTsExtensions": true, // 允许导入 .ts 扩展名的文件
+    "noEmit": true // 不生成输出文件，仅做类型检查（由 Vite 负责构建）
+  }
+}
