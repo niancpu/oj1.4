@@ -7,9 +7,13 @@ import ProblemDisplay from './components/ProblemDisplay';
 import CodeEditor from './components/CodeEditor';
 import ResultPanel from './components/ResultPanel';
 import HintModal from './components/HintModal';
+import LoginPage from './components/LoginPage';
 import { judgeCode, initializePyodide } from './services/pyodideService';
+import { useAuth } from './contexts/AuthContext';
+import { authService } from './services/authService';
 
 const App: React.FC = () => {
+  const { user, isLoading: authLoading, logout } = useAuth();
   const [selectedProblem, setSelectedProblem] = useState<Problem>(PROBLEMS[0]); // 当前选中的题目
   const [isHintModalOpen, setIsHintModalOpen] = useState(false); // 提示模态框是否打开
   const [userCode, setUserCode] = useState<string>(''); // 用户当前编辑的代码
@@ -42,20 +46,39 @@ const App: React.FC = () => {
     init();
   }, []);
 
-  // 加载已解决的题目记录
+  // 加载已解决的题目记录 - 从后端或迁移localStorage
   useEffect(() => {
-    try {
-      const savedSolved = localStorage.getItem('oj_solved_problems');
-      if (savedSolved) {
-        const ids = JSON.parse(savedSolved);
-        if (Array.isArray(ids)) {
-          setSolvedProblemIds(new Set(ids));
+    if (!user) return;
+
+    const loadProgress = async () => {
+      try {
+        // 尝试从服务器加载
+        const solvedIds = await authService.getSolvedProblems();
+        setSolvedProblemIds(new Set(solvedIds));
+      } catch (error) {
+        console.error('Failed to load progress from server', error);
+
+        // 回退：尝试从localStorage加载并迁移
+        const savedSolved = localStorage.getItem('oj_solved_problems');
+        if (savedSolved) {
+          try {
+            const ids = JSON.parse(savedSolved);
+            if (Array.isArray(ids) && ids.length > 0) {
+              // 迁移到服务器
+              await authService.migrateSolvedProblems(ids);
+              setSolvedProblemIds(new Set(ids));
+              // 清除localStorage
+              localStorage.removeItem('oj_solved_problems');
+            }
+          } catch (e) {
+            console.error('Failed to migrate solved problems', e);
+          }
         }
       }
-    } catch (e) {
-      console.error('Failed to load solved problems', e);
-    }
-  }, []);
+    };
+
+    loadProgress();
+  }, [user]);
 
   // 切换题目时的处理逻辑
   const handleProblemChange = useCallback((problemId: number) => {
@@ -115,12 +138,15 @@ const App: React.FC = () => {
         };
       });
 
-      // 如果通过，更新已解决列表并持久化到 localStorage
+      // 如果通过，更新已解决列表并同步到服务器
       if (result.status === 'Accepted') {
         setSolvedProblemIds(prev => {
           const newSet = new Set(prev);
           newSet.add(selectedProblem.id);
-          localStorage.setItem('oj_solved_problems', JSON.stringify(Array.from(newSet)));
+          // 同步到服务器
+          if (user) {
+            authService.markProblemSolved(selectedProblem.id).catch(console.error);
+          }
           return newSet;
         });
       }
@@ -140,7 +166,28 @@ const App: React.FC = () => {
     }
   };
 
-  // 全屏加载遮罩
+  const handleLogout = async () => {
+    if (confirm('确定要退出登录吗？')) {
+      await logout();
+    }
+  };
+
+  // 认证加载中
+  if (authLoading) {
+    return (
+      <div className="h-screen w-screen bg-gray-50 flex flex-col items-center justify-center text-gray-800 z-50">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h1 className="text-xl font-medium text-gray-700 mb-2">加载中...</h1>
+      </div>
+    );
+  }
+
+  // 未登录显示登录页面
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  // Python 引擎加载遮罩
   if (!isEngineReady) {
     return (
       <div className="h-screen w-screen bg-gray-50 flex flex-col items-center justify-center text-gray-800 z-50">
@@ -166,8 +213,17 @@ const App: React.FC = () => {
               Online Judge <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full ml-2 font-medium">Local</span>
             </h1>
           </div>
-          <div className="text-sm text-gray-500">
-            Python 练习平台
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-gray-600">欢迎，<span className="font-medium text-blue-600">{user.username}</span></span>
+            <button
+              onClick={handleLogout}
+              className="text-sm text-gray-600 hover:text-red-600 transition duration-200 flex items-center space-x-1"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              <span>退出</span>
+            </button>
           </div>
         </nav>
       </header>

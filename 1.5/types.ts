@@ -63,3 +63,45 @@ export interface Submission {
   result: JudgeResult;    // 评测结果
   timestamp: Date;        // 提交时间
 }
+
+// ========== 认证相关类型 ==========
+
+// 用户接口
+export interface User {
+  id: number;
+  username: string;
+  created_at: string;
+}
+
+// 设备接口
+export interface Device {
+  id: number;
+  user_id: number;
+  device_fingerprint: string;
+  device_name: string;
+  last_login: string;
+  created_at: string;
+}
+
+// 认证响应
+export interface AuthResponse {
+  message: string;
+  user: User;
+  token: string;
+}
+
+// 登录凭据
+export interface LoginCredentials {
+  username: string;
+  password: string;
+  deviceFingerprint: string;
+  deviceName?: string;
+}
+
+// 注册凭据
+export interface RegisterCredentials {
+  username: string;
+  password: string;
+  deviceFingerprint: string;
+  deviceName: string;
+}
